@@ -109,4 +109,4 @@ large change so we can discuss the approach.
 
 ## License
 
-[MIT](LICENSE) © John Conte
+[MIT](LICENSE) © JontCont
