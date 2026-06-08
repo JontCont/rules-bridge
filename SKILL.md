@@ -28,9 +28,9 @@ skill converts and writes its content to:
 
 | Target    | Output path                          | Notes                                  |
 |-----------|--------------------------------------|----------------------------------------|
-| `copilot` | `.github/copilot-instructions.md`    | Plain Markdown copy                    |
+| `copilot` | `.github/copilot-instructions.md`    | Plain Markdown copy; also syncs `.agents/instructions/` → `.github/instructions/` |
 | `cursor`  | `.cursor/rules/base.mdc`             | Wraps content in `.mdc` YAML frontmatter |
-| `codex`   | `AGENTS.md` *(no change)*            | Codex CLI reads `AGENTS.md` natively   |
+| `codex`   | `AGENTS.md` *(no change)*            | Codex reads `AGENTS.md` + `.agents/instructions/` natively |
 | `all`     | All three targets above              | Runs all conversions in one step       |
 
 ## Command
@@ -68,6 +68,9 @@ Copies the full content of `AGENTS.md` verbatim to
 `.github/copilot-instructions.md`. Creates the `.github/` directory if it
 does not exist.
 
+Also syncs all `.md` files from `.agents/instructions/` to `.github/instructions/`,
+so GitHub Copilot can load the fine-grained per-layer rules with their `applyTo` frontmatter.
+
 ### cursor
 
 Wraps the content of `AGENTS.md` inside a Cursor `.mdc` file with the
@@ -88,6 +91,9 @@ Writes the result to `.cursor/rules/base.mdc`. Creates the
 
 Codex CLI reads `AGENTS.md` natively, so no file conversion is needed.
 The script verifies that `AGENTS.md` exists and reports the result.
+
+Also verifies that `.agents/instructions/` exists and reports the number of
+instruction files available. Codex reads these natively via `AGENTS.md` references.
 
 ### all
 

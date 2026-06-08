@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 # scripts/convert.sh
 # Converts AGENTS.md to the native rule format of each supported AI tool.
+# Also syncs .agents/instructions/ ↔ .github/instructions/ for fine-grained rules.
 #
 # Usage:
 #   bash scripts/convert.sh [copilot|cursor|codex|all]
 #
 # Targets:
 #   copilot  → .github/copilot-instructions.md  (plain Markdown copy)
+#              .github/instructions/             (sync from .agents/instructions/)
 #   cursor   → .cursor/rules/base.mdc            (.mdc with YAML frontmatter)
 #   codex    → AGENTS.md                         (verify only; natively supported)
+#              .agents/instructions/             (verify only; Codex reads natively)
 #   all      → all three targets above           (default)
 
 set -euo pipefail
@@ -18,6 +21,12 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 SOURCE_FILE="AGENTS.md"
+AGENTS_INSTRUCTIONS_DIR=".agents/instructions"
+AGENTS_AGENTS_DIR=".agents/agents"
+AGENTS_SKILLS_DIR=".agents/skills"
+GITHUB_INSTRUCTIONS_DIR=".github/instructions"
+GITHUB_AGENTS_DIR=".github/agents"
+GITHUB_SKILLS_DIR=".github/skills"
 
 info()    { echo "$*"; }
 success() { echo "✅ $*"; }
@@ -34,6 +43,77 @@ if [[ ! -f "${SOURCE_FILE}" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Shared: sync .agents/instructions/ → target instructions dir
+# ---------------------------------------------------------------------------
+
+# Sync .md files from a source dir to a target dir (flat)
+sync_files_to() {
+  local label="$1"
+  local src_dir="$2"
+  local target_dir="$3"
+
+  if [[ ! -d "${src_dir}" ]]; then
+    info "   (no ${src_dir}/ found — skipping ${label} sync)"
+    return 0
+  fi
+
+  if ! mkdir -p "${target_dir}"; then
+    failure "${label} → Failed to create directory '${target_dir}'"
+    return 1
+  fi
+
+  local count=0
+  for src_file in "${src_dir}"/*.md; do
+    [[ -f "${src_file}" ]] || continue
+    local filename
+    filename="$(basename "${src_file}")"
+    cp "${src_file}" "${target_dir}/${filename}"
+    ((count++)) || true
+  done
+
+  if [[ ${count} -gt 0 ]]; then
+    success "${label} → ${target_dir}/ (${count} files synced)"
+  else
+    info "   (no .md files in ${src_dir}/ — nothing synced)"
+  fi
+}
+
+# Sync skill folders (each skill is a directory with SKILL.md inside)
+sync_skills_to() {
+  local src_dir="$1"
+  local target_dir="$2"
+
+  if [[ ! -d "${src_dir}" ]]; then
+    info "   (no ${src_dir}/ found — skipping skills sync)"
+    return 0
+  fi
+
+  if ! mkdir -p "${target_dir}"; then
+    failure "skills → Failed to create directory '${target_dir}'"
+    return 1
+  fi
+
+  local count=0
+  for skill_dir in "${src_dir}"/*/; do
+    [[ -d "${skill_dir}" ]] || continue
+    local skill_name
+    skill_name="$(basename "${skill_dir}")"
+    local dest="${target_dir}/${skill_name}"
+    mkdir -p "${dest}"
+    cp -r "${skill_dir}." "${dest}/"
+    ((count++)) || true
+  done
+
+  if [[ ${count} -gt 0 ]]; then
+    success "skills    → ${target_dir}/ (${count} skill folders synced)"
+  else
+    info "   (no skill folders in ${src_dir}/ — nothing synced)"
+  fi
+}
+
+sync_instructions_to() { sync_files_to "instructions" "${AGENTS_INSTRUCTIONS_DIR}" "$1"; }
+
+# ---------------------------------------------------------------------------
 # Conversion functions
 # ---------------------------------------------------------------------------
 
@@ -47,6 +127,11 @@ convert_copilot() {
     failure "copilot  → Failed to write '${dest_file}'"
     return 1
   fi
+
+  # Sync fine-grained instructions, agents, skills
+  sync_instructions_to "${GITHUB_INSTRUCTIONS_DIR}"
+  sync_files_to "agents" "${AGENTS_AGENTS_DIR}" "${GITHUB_AGENTS_DIR}"
+  sync_skills_to "${AGENTS_SKILLS_DIR}" "${GITHUB_SKILLS_DIR}"
 }
 
 convert_cursor() {
@@ -78,10 +163,37 @@ convert_cursor() {
 convert_codex() {
   # Codex CLI reads AGENTS.md natively — just verify it exists.
   if [[ -f "${SOURCE_FILE}" ]]; then
-    success "codex    → ${SOURCE_FILE} (already present; Codex CLI reads it natively)"
+    success "codex    → ${SOURCE_FILE} (present; Codex CLI reads it natively)"
   else
     failure "codex    → '${SOURCE_FILE}' not found"
     return 1
+  fi
+
+  # Verify .agents/instructions/ exists
+  if [[ -d "${AGENTS_INSTRUCTIONS_DIR}" ]]; then
+    local count
+    count=$(find "${AGENTS_INSTRUCTIONS_DIR}" -maxdepth 1 -name "*.md" | wc -l | tr -d ' ')
+    success "codex    → ${AGENTS_INSTRUCTIONS_DIR}/ (${count} instruction files; read natively)"
+  else
+    info "   (no .agents/instructions/ — consider running 'rules-bridge copilot' first)"
+  fi
+
+  # Verify .agents/agents/ exists
+  if [[ -d "${AGENTS_AGENTS_DIR}" ]]; then
+    local acount
+    acount=$(find "${AGENTS_AGENTS_DIR}" -maxdepth 1 -name "*.md" | wc -l | tr -d ' ')
+    success "codex    → ${AGENTS_AGENTS_DIR}/ (${acount} agent files; read natively)"
+  else
+    info "   (no .agents/agents/ — consider running 'rules-bridge copilot' first)"
+  fi
+
+  # Verify .agents/skills/ exists
+  if [[ -d "${AGENTS_SKILLS_DIR}" ]]; then
+    local scount
+    scount=$(find "${AGENTS_SKILLS_DIR}" -maxdepth 1 -mindepth 1 -type d | wc -l | tr -d ' ')
+    success "codex    → ${AGENTS_SKILLS_DIR}/ (${scount} skill folders; read natively)"
+  else
+    info "   (no .agents/skills/ — consider running 'rules-bridge copilot' first)"
   fi
 }
 
