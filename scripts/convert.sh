@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # scripts/convert.sh
 # Converts AGENTS.md to the native rule format of each supported AI tool.
-# Also syncs .agents/instructions/ ↔ .github/instructions/ for fine-grained rules.
+# Also syncs .agents/instructions/ → .github/instructions/ for fine-grained rules,
+# and mirrors .github/agents/ + .github/skills/ → .agents/agents/ + .agents/skills/
+# so Codex can consume the same repo-local guidance.
 #
 # Usage:
 #   bash scripts/convert.sh [copilot|cursor|codex|all]
@@ -9,9 +11,13 @@
 # Targets:
 #   copilot  → .github/copilot-instructions.md  (plain Markdown copy)
 #              .github/instructions/             (sync from .agents/instructions/)
+#              .agents/agents/                   (mirror from .github/agents/)
+#              .agents/skills/                   (mirror from .github/skills/)
 #   cursor   → .cursor/rules/base.mdc            (.mdc with YAML frontmatter)
 #   codex    → AGENTS.md                         (verify only; natively supported)
 #              .agents/instructions/             (verify only; Codex reads natively)
+#              .agents/agents/                   (verify only; Codex reads natively)
+#              .agents/skills/                   (verify only; Codex reads natively)
 #   all      → all three targets above           (default)
 
 set -euo pipefail
@@ -128,10 +134,10 @@ convert_copilot() {
     return 1
   fi
 
-  # Sync fine-grained instructions, agents, skills
+  # Sync fine-grained instructions to GitHub, then mirror GitHub agent metadata back to Codex folders
   sync_instructions_to "${GITHUB_INSTRUCTIONS_DIR}"
-  sync_files_to "agents" "${AGENTS_AGENTS_DIR}" "${GITHUB_AGENTS_DIR}"
-  sync_skills_to "${AGENTS_SKILLS_DIR}" "${GITHUB_SKILLS_DIR}"
+  sync_files_to "agents mirror" "${GITHUB_AGENTS_DIR}" "${AGENTS_AGENTS_DIR}"
+  sync_skills_to "${GITHUB_SKILLS_DIR}" "${AGENTS_SKILLS_DIR}"
 }
 
 convert_cursor() {

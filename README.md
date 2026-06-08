@@ -5,6 +5,8 @@
 `rules-bridge` reads your `AGENTS.md` (or `CLAUDE.md`) and automatically
 converts it to the native configuration format expected by GitHub Copilot,
 Cursor, and Codex CLI — all from a single slash command inside Claude Code.
+It also mirrors repo-local agent and skill metadata so Codex can pick up the
+same guidance that Copilot sees.
 
 ---
 
@@ -41,7 +43,7 @@ Open Claude Code in your project root and run:
 | Target    | Effect                                                          |
 |-----------|-----------------------------------------------------------------|
 | `all`     | Sync to **all** supported tools (default when omitted)          |
-| `copilot` | Write `.github/copilot-instructions.md`                         |
+| `copilot` | Write `.github/copilot-instructions.md` and mirror repo agent/skill metadata |
 | `cursor`  | Write `.cursor/rules/base.mdc` with `.mdc` YAML frontmatter     |
 | `codex`   | Verify `AGENTS.md` exists (Codex CLI reads it natively)         |
 
@@ -71,8 +73,10 @@ Open Claude Code in your project root and run:
 2. **`commands/rules-bridge.md`** — defines the `/rules-bridge` slash command
    and passes `$ARGUMENTS` to the conversion script.
 3. **`scripts/convert.sh`** — the core logic: reads `AGENTS.md`, creates the
-   required directories, and writes the converted files. Each step prints a
-   `✅` success or `❌` failure status.
+   required directories, and writes the converted files. It also mirrors
+   `.github/agents/` and `.github/skills/` into `.agents/agents/` and
+   `.agents/skills/` so Codex can consume the same repo-local guidance. Each
+   step prints a `✅` success or `❌` failure status.
 
 ---
 

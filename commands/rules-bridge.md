@@ -1,6 +1,6 @@
 # /rules-bridge
 
-Sync your `AGENTS.md` rules to one or all supported AI tool configurations.
+Sync your `AGENTS.md` rules and repo-local agent/skill metadata to one or all supported AI tool configurations.
 
 ## Usage
 
@@ -12,7 +12,7 @@ Sync your `AGENTS.md` rules to one or all supported AI tool configurations.
 
 | Argument  | Description                                                         |
 |-----------|---------------------------------------------------------------------|
-| `copilot` | Write rules to `.github/copilot-instructions.md`                    |
+| `copilot` | Write rules to `.github/copilot-instructions.md` and mirror repo agent/skill metadata |
 | `cursor`  | Write rules to `.cursor/rules/base.mdc` (with `.mdc` frontmatter)   |
 | `codex`   | Verify that `AGENTS.md` exists (Codex CLI reads it natively)        |
 | `all`     | Run all of the above (default when no argument is given)            |

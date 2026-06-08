@@ -12,8 +12,8 @@ description: |
   觸發關鍵詞（中文）：同步規則、轉換規則、橋接規則、規則同步、規則轉換、
   規則橋接、匯出規則、更新規則、同步 AI 規則、將規則同步到工具
 
-  Use the `/rules-bridge` command to sync your AGENTS.md to one or all
-  supported tools at once.
+  Use the `/rules-bridge` command to sync your AGENTS.md plus repo agent/skill
+  metadata to one or all supported tools at once.
 ---
 
 # rules-bridge Skill
@@ -28,9 +28,9 @@ skill converts and writes its content to:
 
 | Target    | Output path                          | Notes                                  |
 |-----------|--------------------------------------|----------------------------------------|
-| `copilot` | `.github/copilot-instructions.md`    | Plain Markdown copy; also syncs `.agents/instructions/` → `.github/instructions/` |
+| `copilot` | `.github/copilot-instructions.md`    | Plain Markdown copy; also syncs instructions, agents, and skills between repo metadata folders |
 | `cursor`  | `.cursor/rules/base.mdc`             | Wraps content in `.mdc` YAML frontmatter |
-| `codex`   | `AGENTS.md` *(no change)*            | Codex reads `AGENTS.md` + `.agents/instructions/` natively |
+| `codex`   | `AGENTS.md` *(no change)*            | Codex reads `AGENTS.md` + `.agents/*/` natively |
 | `all`     | All three targets above              | Runs all conversions in one step       |
 
 ## Command
@@ -48,7 +48,8 @@ skill converts and writes its content to:
 2. The command delegates to `scripts/convert.sh $ARGUMENTS`, passing the
    target name as `$1`.
 3. `convert.sh` reads `AGENTS.md` from the current working directory and
-   writes the converted output to the appropriate path(s).
+   writes the converted output to the appropriate path(s), including repo
+   agent/skill mirrors when present.
 4. Each operation prints a `✅` success or `❌` failure status line.
 
 ## File responsibilities
@@ -69,7 +70,8 @@ Copies the full content of `AGENTS.md` verbatim to
 does not exist.
 
 Also syncs all `.md` files from `.agents/instructions/` to `.github/instructions/`,
-so GitHub Copilot can load the fine-grained per-layer rules with their `applyTo` frontmatter.
+and mirrors `.github/agents/` + `.github/skills/` into `.agents/agents/` + `.agents/skills/`,
+so GitHub Copilot and Codex can read the same repo-local guidance.
 
 ### cursor
 
@@ -92,8 +94,9 @@ Writes the result to `.cursor/rules/base.mdc`. Creates the
 Codex CLI reads `AGENTS.md` natively, so no file conversion is needed.
 The script verifies that `AGENTS.md` exists and reports the result.
 
-Also verifies that `.agents/instructions/` exists and reports the number of
-instruction files available. Codex reads these natively via `AGENTS.md` references.
+Also verifies that `.agents/instructions/`, `.agents/agents/`, and
+`.agents/skills/` exist and reports the available file/folder counts. Codex
+reads these natively via the repo instruction references.
 
 ### all
 
